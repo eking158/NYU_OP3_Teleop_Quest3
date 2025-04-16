@@ -1,0 +1,18 @@
+<?xml version="1.0" ?>
+<launch>    
+    <param name="gazebo"                   value="false"    type="bool"/>
+    <param name="gazebo_robot_name"        value="robotis_op3"/>
+
+    <param name="server_ip_address"        value="192.168.50.233"/>
+
+    <param name="device_name"              value="/dev/ttyUSB0"/>
+    <param name="offset_file_path"         value="$(find adol_op3_AR_manager)/config/offset.yaml"/>
+    <param name="robot_file_path"          value="$(find adol_op3_AR_manager)/config/OP3.robot"/>
+    <param name="init_file_path"           value="$(find adol_op3_AR_manager)/config/dxl_init_OP3.yaml"/>
+ 
+    <param name="init_pose_file_path"      value="$(find adol_op3_AR_manager)/config/ini_pose for_AR.yaml"/>
+ 
+    <!-- OP3 Manager -->
+    <node pkg="adol_op3_AR_manager" type="adol_op3_AR_manager" name="adol_op3_AR_manager" output="screen"/>
+    <!-- <node pkg="camera_test" type="camera_test" name="camera_test" output="screen"/> -->
+</launch>
