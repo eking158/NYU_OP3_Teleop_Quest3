@@ -110,8 +110,7 @@ OP3ARWholeBodyCtrlModule::OP3ARWholeBodyCtrlModule()
   module_activate = false;
   teleop_on = false;
   teleop_status = 0;
-  com_dummy_x = -800;
-  com_dummy_y = 0;
+  com_dummy = -700;
 }
 
 OP3ARWholeBodyCtrlModule::~OP3ARWholeBodyCtrlModule()
@@ -243,11 +242,13 @@ void OP3ARWholeBodyCtrlModule::GetDataFromUnity(){
     com_msgs.data.resize(2);
     com_msgs.data[0] = com_state_[0];  //curr_com_x_pos_m_
     com_msgs.data[1] = com_state_[1];  //(curr_com_x_pos_m_ - prev_com_pos_x_)/control_cycle_sec_
-    //com_msgs.data[0] = (double)com_dummy_x / 10000;
-    //com_msgs.data[1] = (double)com_dummy_y / 10000;
-    com_pub.publish(com_msgs);
-    com_dummy_x = com_dummy_x + 1;
-    com_dummy_y = com_dummy_y + 1;
+    //com_msgs.data[0] = (double)com_dummy / 10000;
+    //com_msgs.data[1] = (double)(com_dummy*-3.4 + 4000) / 10000;  //com_dummy_y / 10000;
+    //com_pub.publish(com_msgs);
+    //if(com_dummy > 600)
+    //  com_dummy = -700;
+    //else
+    //  com_dummy = com_dummy + 1;
     //----------------------------------------------
     TeleopStatus();
     std_msgs::Int32 teleop_status_msgs;

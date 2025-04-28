@@ -92,7 +92,7 @@ public:
   bool module_activate;
   bool teleop_on;
   int teleop_status;
-  int com_dummy_x, com_dummy_y;
+  int com_dummy;
 
   robotis_framework::DynamixelState* dyn_state_[21];
   robotis_op::OP3KinematicsDynamics* op3_kd_;
