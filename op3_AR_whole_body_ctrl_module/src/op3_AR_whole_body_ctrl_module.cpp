@@ -143,7 +143,7 @@ void OP3ARWholeBodyCtrlModule::initialize(const int control_cycle_msec, robotis_
   std::time_t now = std::time(0);
   std::tm *now_t = std::localtime(&now);
   std::stringstream ss;
-  ss << getenv("HOME") << "/Documents/" << now_t->tm_year + 1900;
+  ss << getenv("HOME") << "/Documents/Haewon/" << now_t->tm_year + 1900;
   ss << std::setw(2) << std::setfill('0') << now_t->tm_mon + 1
      << std::setw(2) << std::setfill('0') << now_t->tm_mday
      << std::setw(2) << std::setfill('0') << now_t->tm_hour
