@@ -244,7 +244,7 @@ void OP3ARWholeBodyCtrlModule::GetDataFromUnity(){
     com_msgs.data[1] = com_state_[1];  //(curr_com_x_pos_m_ - prev_com_pos_x_)/control_cycle_sec_
     //com_msgs.data[0] = (double)com_dummy / 10000;
     //com_msgs.data[1] = (double)(com_dummy*-3.4 + 4000) / 10000;  //com_dummy_y / 10000;
-    //com_pub.publish(com_msgs);
+    com_pub.publish(com_msgs);
     //if(com_dummy > 600)
     //  com_dummy = -700;
     //else
