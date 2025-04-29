@@ -59,6 +59,7 @@ public:
 
   void JointAngleCallback(const std_msgs::Float64MultiArray::ConstPtr& msg);
   void ControlOnOffCallback(const std_msgs::Float64MultiArray::ConstPtr& msg);
+  void OperatorNameCallback(const std_msgs::String::ConstPtr& msg);
   void TeleopStatus();
 
   float map(float x, float in_min, float in_max, float out_min, float out_max);
@@ -91,8 +92,11 @@ public:
 
   bool module_activate;
   bool teleop_on;
+  bool is_file_open_;
   int teleop_status;
   int com_dummy;
+  std::string person_name;
+  int experiment_test_num;
 
   robotis_framework::DynamixelState* dyn_state_[21];
   robotis_op::OP3KinematicsDynamics* op3_kd_;

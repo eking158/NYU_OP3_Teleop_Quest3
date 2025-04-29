@@ -109,14 +109,21 @@ OP3ARWholeBodyCtrlModule::OP3ARWholeBodyCtrlModule()
 
   module_activate = false;
   teleop_on = false;
+  is_file_open_ = false;
   teleop_status = 0;
   com_dummy = -700;
+
+  person_name = "Haewon";
+  //person_name = "Govind";
+  //person_name = "Devang";
+  experiment_test_num = 0;
 }
 
 OP3ARWholeBodyCtrlModule::~OP3ARWholeBodyCtrlModule()
 {
   queue_thread_.join();
-  file.close();
+  if (is_file_open_)
+    file.close();
 }
 
 void OP3ARWholeBodyCtrlModule::initialize(const int control_cycle_msec, robotis_framework::Robot *robot)
@@ -140,21 +147,21 @@ void OP3ARWholeBodyCtrlModule::initialize(const int control_cycle_msec, robotis_
     result_[joint_name]->goal_position_ = dxl_info->dxl_state_->goal_position_;
   }
 
-  std::time_t now = std::time(0);
-  std::tm *now_t = std::localtime(&now);
-  std::stringstream ss;
-  ss << getenv("HOME") << "/Documents/Haewon/" << now_t->tm_year + 1900;
-  ss << std::setw(2) << std::setfill('0') << now_t->tm_mon + 1
-     << std::setw(2) << std::setfill('0') << now_t->tm_mday
-     << std::setw(2) << std::setfill('0') << now_t->tm_hour
-     << std::setw(2) << std::setfill('0') << now_t->tm_min << ".txt";
-  std::cout << ss.str() << std::endl;
-
-  file.open(ss.str().c_str());
-  if (file.is_open() == true)
-    ROS_INFO("logging file is open");
-  else
-    ROS_ERROR("logging file is not open");
+  //std::time_t now = std::time(0);
+  //std::tm *now_t = std::localtime(&now);
+  //std::stringstream ss;
+  //ss << getenv("HOME") << "/Documents/Haewon/" << now_t->tm_year + 1900;
+  //ss << std::setw(2) << std::setfill('0') << now_t->tm_mon + 1
+  //   << std::setw(2) << std::setfill('0') << now_t->tm_mday
+  //   << std::setw(2) << std::setfill('0') << now_t->tm_hour
+  //   << std::setw(2) << std::setfill('0') << now_t->tm_min << ".txt";
+  //std::cout << ss.str() << std::endl;
+//
+  //file.open(ss.str().c_str());
+  //if (file.is_open() == true)
+  //  ROS_INFO("logging file is open");
+  //else
+  //  ROS_ERROR("logging file is not open");
 }
 
 void OP3ARWholeBodyCtrlModule::queueThread()
@@ -217,6 +224,7 @@ void OP3ARWholeBodyCtrlModule::GetDataFromUnity(){
   /* subscribe topics */
   ros::Subscriber joint_angle_sub = ros_node.subscribe("/unity/joint_angles", 0, &OP3ARWholeBodyCtrlModule::JointAngleCallback, this);
   ros::Subscriber control_onoff_sub = ros_node.subscribe("/control_on_off", 0, &OP3ARWholeBodyCtrlModule::ControlOnOffCallback, this);
+  ros::Subscriber operator_name_sub = ros_node.subscribe("/operator_name", 0, &OP3ARWholeBodyCtrlModule::OperatorNameCallback, this);
 
   ros::WallDuration duration(control_cycle_msec_ / 1000.0);
   while (ros_node.ok())
@@ -277,11 +285,54 @@ void OP3ARWholeBodyCtrlModule::JointAngleCallback(const std_msgs::Float64MultiAr
 }
 void OP3ARWholeBodyCtrlModule::ControlOnOffCallback(const std_msgs::Float64MultiArray::ConstPtr& msg){
   //--------------------------------------------------------------------
-  if(module_activate)
+  if (module_activate)
+  {
+    bool prev_teleop_on = teleop_on;
     teleop_on = msg->data[0];
+    if (!prev_teleop_on && teleop_on) // OFF -> ON 전환 (시작)
+    {
+      if (!is_file_open_)
+      {
+        std::time_t now = std::time(0);
+        std::tm *now_t = std::localtime(&now);
+        std::stringstream ss;
+        ss << getenv("HOME") << "/Documents/"<<person_name<<"/" << person_name << "_" << now_t->tm_year + 1900;
+        ss << std::setw(2) << std::setfill('0') << now_t->tm_mon + 1
+           << std::setw(2) << std::setfill('0') << now_t->tm_mday
+           << std::setw(2) << std::setfill('0') << now_t->tm_hour
+           << std::setw(2) << std::setfill('0') << now_t->tm_min
+           << std::setw(2) << std::setfill('0') << now_t->tm_sec << "_" << experiment_test_num<< ".txt"; // 초(sec)까지 추가
+        file.open(ss.str().c_str());
+        if (file.is_open())
+        {
+          ROS_INFO("Logging file opened: %s", ss.str().c_str());
+          is_file_open_ = true;
+        }
+        else
+        {
+          ROS_ERROR("Failed to open logging file");
+        }
+      }
+    }
+    else if (prev_teleop_on && !teleop_on) // ON -> OFF 전환 (종료)
+    {
+      if (is_file_open_)
+      {
+        file.close();
+        ROS_INFO("Logging file closed");
+        is_file_open_ = false;
+        experiment_test_num++;
+      }
+    }
+  }
   //--------------------------------------------------------------------
-  //ROS_INFO("unity_joint_angles[3]: %f", unity_joint_angles[3]);
 }
+void OP3ARWholeBodyCtrlModule::OperatorNameCallback(const std_msgs::String::ConstPtr& msg){
+  person_name = msg->data;
+  experiment_test_num = 0;
+  ROS_INFO("Operator is Changed to %s", person_name.c_str());
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void OP3ARWholeBodyCtrlModule::TeleopStatus(){
   //--------------------------------------------------------------------
   if(!module_activate && !teleop_on)
@@ -389,30 +440,31 @@ void OP3ARWholeBodyCtrlModule::process(std::map<std::string, robotis_framework::
     com_state_[1] = (curr_com_x_pos_m_ - prev_com_pos_x_)/control_cycle_sec_;
     prev_com_pos_x_ = curr_com_x_pos_m_;
 
-
-    file << dyn_state_[1] ->goal_position_ << " " << dxls["r_sho_pitch"]->dxl_state_->present_position_ << " "
-         << dyn_state_[2] ->goal_position_ << " " << dxls["l_sho_pitch"]->dxl_state_->present_position_ << " "
-         << dyn_state_[3] ->goal_position_ << " " << dxls["r_sho_roll"]->dxl_state_->present_position_ << " "
-         << dyn_state_[4] ->goal_position_ << " " << dxls["l_sho_roll"]->dxl_state_->present_position_ << " "
-         << dyn_state_[5] ->goal_position_ << " " << dxls["r_el"]->dxl_state_->present_position_ << " "
-         << dyn_state_[6] ->goal_position_ << " " << dxls["l_el"]->dxl_state_->present_position_ << " "
-         << dyn_state_[7] ->goal_position_ << " " << dxls["r_hip_yaw"]->dxl_state_->present_position_ << " "
-         << dyn_state_[8] ->goal_position_ << " " << dxls["l_hip_yaw"]->dxl_state_->present_position_ << " "
-         << dyn_state_[9] ->goal_position_ << " " << dxls["r_hip_roll"]->dxl_state_->present_position_ << " "
-         << dyn_state_[10]->goal_position_ << " " <<  dxls["l_hip_roll"]->dxl_state_->present_position_ << " "
-         << dyn_state_[11]->goal_position_ << " " <<  dxls["r_hip_pitch"]->dxl_state_->present_position_ << " "
-         << dyn_state_[12]->goal_position_ << " " <<  dxls["l_hip_pitch"]->dxl_state_->present_position_ << " "
-         << dyn_state_[13]->goal_position_ << " " <<  dxls["r_knee"]->dxl_state_->present_position_ << " "
-         << dyn_state_[14]->goal_position_ << " " <<  dxls["l_knee"]->dxl_state_->present_position_ << " "
-         << dyn_state_[15]->goal_position_ << " " <<  dxls["r_ank_pitch"]->dxl_state_->present_position_ << " "
-         << dyn_state_[16]->goal_position_ << " " <<  dxls["l_ank_pitch"]->dxl_state_->present_position_ << " "
-         << dyn_state_[17]->goal_position_ << " " <<  dxls["r_ank_roll"]->dxl_state_->present_position_ << " "
-         << dyn_state_[18]->goal_position_ << " " <<  dxls["l_ank_roll"]->dxl_state_->present_position_ << " "
-         << dyn_state_[19]->goal_position_ << " " <<  dxls["head_pan"]->dxl_state_->present_position_ << " "
-         << dyn_state_[20]->goal_position_ << " " <<  dxls["head_tilt"]->dxl_state_->present_position_ << " "
-         << com_state_[0] << " " << com_state_[1]
-         << std::endl;
-
+    if (is_file_open_)
+    {
+      file << dyn_state_[1] ->goal_position_ << " " << dxls["r_sho_pitch"]->dxl_state_->present_position_ << " "
+           << dyn_state_[2] ->goal_position_ << " " << dxls["l_sho_pitch"]->dxl_state_->present_position_ << " "
+           << dyn_state_[3] ->goal_position_ << " " << dxls["r_sho_roll"]->dxl_state_->present_position_ << " "
+           << dyn_state_[4] ->goal_position_ << " " << dxls["l_sho_roll"]->dxl_state_->present_position_ << " "
+           << dyn_state_[5] ->goal_position_ << " " << dxls["r_el"]->dxl_state_->present_position_ << " "
+           << dyn_state_[6] ->goal_position_ << " " << dxls["l_el"]->dxl_state_->present_position_ << " "
+           << dyn_state_[7] ->goal_position_ << " " << dxls["r_hip_yaw"]->dxl_state_->present_position_ << " "
+           << dyn_state_[8] ->goal_position_ << " " << dxls["l_hip_yaw"]->dxl_state_->present_position_ << " "
+           << dyn_state_[9] ->goal_position_ << " " << dxls["r_hip_roll"]->dxl_state_->present_position_ << " "
+           << dyn_state_[10]->goal_position_ << " " <<  dxls["l_hip_roll"]->dxl_state_->present_position_ << " "
+           << dyn_state_[11]->goal_position_ << " " <<  dxls["r_hip_pitch"]->dxl_state_->present_position_ << " "
+           << dyn_state_[12]->goal_position_ << " " <<  dxls["l_hip_pitch"]->dxl_state_->present_position_ << " "
+           << dyn_state_[13]->goal_position_ << " " <<  dxls["r_knee"]->dxl_state_->present_position_ << " "
+           << dyn_state_[14]->goal_position_ << " " <<  dxls["l_knee"]->dxl_state_->present_position_ << " "
+           << dyn_state_[15]->goal_position_ << " " <<  dxls["r_ank_pitch"]->dxl_state_->present_position_ << " "
+           << dyn_state_[16]->goal_position_ << " " <<  dxls["l_ank_pitch"]->dxl_state_->present_position_ << " "
+           << dyn_state_[17]->goal_position_ << " " <<  dxls["r_ank_roll"]->dxl_state_->present_position_ << " "
+           << dyn_state_[18]->goal_position_ << " " <<  dxls["l_ank_roll"]->dxl_state_->present_position_ << " "
+           << dyn_state_[19]->goal_position_ << " " <<  dxls["head_pan"]->dxl_state_->present_position_ << " "
+           << dyn_state_[20]->goal_position_ << " " <<  dxls["head_tilt"]->dxl_state_->present_position_ << " "
+           << com_state_[0] << " " << com_state_[1]
+           << std::endl;
+    }
     // file << result_["r_sho_pitch"]->goal_position_ << result_["r_sho_pitch"]->present_position_
     //      << result_["r_sho_roll"]->goal_position_ << result_["r_sho_roll"]->present_position_
     //      << result_["r_el"]->goal_position_ << result_["r_el"]->present_position_
